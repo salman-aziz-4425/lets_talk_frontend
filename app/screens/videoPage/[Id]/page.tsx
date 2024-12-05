@@ -7,7 +7,7 @@ export default function Page({ params }: { params: { Id: string } }) {
     const { state, dispatch } = useVideoContext();
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
-    const streamInitialized = useRef(false); // Prevent duplicate initialization
+    const streamInitialized = useRef(false); 
 
     useEffect(() => {
         if (params?.Id) {
@@ -19,15 +19,14 @@ export default function Page({ params }: { params: { Id: string } }) {
             navigator.mediaDevices
                 .getUserMedia({ video: true, audio: true })
                 .then((stream) => {
-                    dispatch({ type: "SET_LOCAL_STREAM", payload: stream });
-                    console.log("Local stream initialized");
+                    const newStream = stream;
+                    newStream.getAudioTracks()[0].enabled = false;
+                    newStream.getVideoTracks()[0].enabled = false;
+                    dispatch({ type: "SET_LOCAL_STREAM", payload: newStream});
                 })
                 .catch((error) => {
                     console.error("Error accessing media devices:", error);
                 });
-        }
-        return () => {
-          console.log("Cleaning up local stream");
         }
     }, [params?.Id]);
 
@@ -52,20 +51,24 @@ export default function Page({ params }: { params: { Id: string } }) {
     }, [params?.Id, dispatch]);
 
     const toggleMute = () => {
+        console.log(state.localStream);
         if (state.localStream) {
             const audioTrack = state.localStream.getAudioTracks()[0];
+            console.log(audioTrack);
+            const newMutestatus = !audioTrack?.enabled;
             if (audioTrack) {
                 console.log("Toggling audio track");
                 audioTrack.enabled = !audioTrack.enabled;
-                setIsMuted(!audioTrack.enabled);
                 if (state?.ws) {
                     state.ws.send(JSON.stringify({
                         type: "TOGGLE_AUDIO",
+                        Group: state.groupId,
                         peerId: state.peer._id,
                         Muted: !audioTrack.enabled
                     }));
                 }
             }
+            setIsMuted(newMutestatus);
         }
     };
 
@@ -75,7 +78,6 @@ export default function Page({ params }: { params: { Id: string } }) {
             if (videoTrack) {
                 videoTrack.enabled = !videoTrack.enabled;
                 setIsVideoOff(!videoTrack.enabled);
-                console.log("Toggling video track");
                 if (state?.ws) {
                     state.ws.send(JSON.stringify({
                         type: "TOGGLE_VIDEO",
@@ -87,13 +89,15 @@ export default function Page({ params }: { params: { Id: string } }) {
         }
     };
 
+    console.log(state?.localStream?.getAudioTracks()[0]?.enabled)
+    console.log(isMuted)
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
             <h1 className="text-3xl font-bold text-gray-800 mb-8">Group Video Chat</h1>
             <video
                 autoPlay
                 playsInline
-                muted={isMuted}
+                muted={false}
                 className="w-96 h-64 border-4 border-blue-500 rounded-lg shadow-lg transform transition duration-300 hover:scale-105"
                 ref={(video) => {
                     if (video && state.localStream) video.srcObject = state.localStream;
@@ -105,6 +109,7 @@ export default function Page({ params }: { params: { Id: string } }) {
                         <video
                         key={peerId}
                         autoPlay
+                        muted={!state?.localStream?.getAudioTracks()[0]?.enabled}
                         playsInline
                         className="w-72 h-48 border-4 border-green-500 rounded-lg shadow-lg transform transition duration-300 hover:scale-105"
                         ref={(video) => {
@@ -120,10 +125,10 @@ export default function Page({ params }: { params: { Id: string } }) {
                 <button
                     onClick={toggleMute}
                     className={`px-4 py-2 rounded-lg shadow-lg transition duration-300 ${
-                        isMuted ? "bg-green-500" : "bg-red-500"
+                        !state?.localStream?.getAudioTracks()[0]?.enabled ? "bg-green-500" : "bg-red-500"
                     } text-white`}
                 >
-                    {isMuted ? "Unmute" : "Mute"}
+                    {!state?.localStream?.getAudioTracks()[0]?.enabled ? "Unmute" : "Mute"}
                 </button>
                 <button
                     onClick={toggleVideo}
@@ -133,9 +138,7 @@ export default function Page({ params }: { params: { Id: string } }) {
                 >
                     {isVideoOff ? "Turn Video On" : "Turn Video Off"}
                 </button>
-                <button className={`px-4 py-2 rounded-lg shadow-lg transition duration-300 ${
-                        isVideoOff ? "bg-green-500" : "bg-blue-500"
-                    } text-white`} onClick={()=>{
+                <button className={`px-4 py-2 rounded-lg shadow-lg bg-red-500 transition duration-300 text-white`} onClick={()=>{
                     state?.ws?.send(JSON.stringify({type:"REMOVE_PEER",Group:state.groupId,peerId:state.peer._id}))
                 }}>
                     <a href="/screens/dashboard">Leave Group</a>

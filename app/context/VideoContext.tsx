@@ -112,7 +112,10 @@ const initializePeer = (dispatch: React.Dispatch<VideoAction>) => {
       .then((stream) => {
         call.answer(stream);
         call.on("stream", (remoteStream) => {
-          dispatch({ type: "ADD_PEER", payload: { peerId: call.peer, stream: remoteStream } });
+          const newStream = stream;
+          newStream.getAudioTracks()[0].enabled = false;
+          newStream.getVideoTracks()[0].enabled = false;
+          dispatch({ type: "ADD_PEER", payload: { peerId: call.peer, stream: newStream } });
         });
       });
   });
@@ -146,11 +149,14 @@ export const VideoContextProvider = ({ children }: { children: ReactNode }) => {
           const message = JSON.parse(event.data);
           if (message.type === "NEW_PEER") {
             navigator.mediaDevices
-              .getUserMedia({ video: true, audio: true })
+              .getUserMedia({ video: true, audio: true})
               .then((stream) => {
                 const call = peer.call(message.peerId, stream);
                 call.on("stream", (remoteStream) => {
-                  dispatch({ type: "ADD_PEER", payload: { peerId: message.peerId, stream: remoteStream } });
+                  const newStream=remoteStream;
+                  newStream.getAudioTracks()[0].enabled = false;
+                  newStream.getVideoTracks()[0].enabled = false;
+                  dispatch({ type: "ADD_PEER", payload: { peerId: message.peerId, stream: newStream } });
                 });
               });
           }
