@@ -112,7 +112,7 @@ const initializePeer = (dispatch: React.Dispatch<VideoAction>) => {
       .then((stream) => {
         call.answer(stream);
         call.on("stream", (remoteStream) => {
-          const newStream = stream;
+          const newStream = remoteStream;
           newStream.getAudioTracks()[0].enabled = false;
           newStream.getVideoTracks()[0].enabled = false;
           dispatch({ type: "ADD_PEER", payload: { peerId: call.peer, stream: newStream } });
