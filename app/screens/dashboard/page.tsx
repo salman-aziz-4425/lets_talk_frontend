@@ -15,9 +15,8 @@ type groups ={
 
 export default function Page() {
     const [groupName, setGroupName] = useState("");
-    const [groupList, setGroupList] = useState<string[]>([]);
     const [groups,setgroups] =useState<groups[]>([])
-    const {state, dispatch} = useVideoContext();
+    const {state} = useVideoContext();
 
     const navigate=useRouter()
 
@@ -52,6 +51,7 @@ export default function Page() {
         navigate.push(`videoPage/${groupId}`)
     };
 
+    
     return (
         <div className="max-w-2xl mx-auto p-8 bg-[#f7f9fc] rounded-lg shadow-md">
             <div className="flex justify-center mb-8">

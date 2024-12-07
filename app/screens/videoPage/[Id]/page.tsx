@@ -1,71 +1,46 @@
 "use client";
 
 import { useVideoContext } from "@/app/context/VideoContext";
+import useMediaStream from "@/hooks/useMediaStream";
 import { useEffect, useState, useRef } from "react";
 
 export default function Page({ params }: { params: { Id: string } }) {
     const { state, dispatch } = useVideoContext();
+    const { stream, setState }: any = useMediaStream();
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
-    const streamInitialized = useRef(false); 
+    const streamInitialized = useRef(false);
 
     useEffect(() => {
         if (params?.Id) {
             dispatch({ type: "SET_GROUP", payload: params.Id });
-            if (streamInitialized.current || state.localStream || state.peer) return;
-
             streamInitialized.current = true;
-    
-            navigator.mediaDevices
-                .getUserMedia({ video: true, audio: true })
-                .then((stream) => {
-                    const newStream = stream;
-                    newStream.getAudioTracks()[0].enabled = false;
-                    newStream.getVideoTracks()[0].enabled = false;
-                    dispatch({ type: "SET_LOCAL_STREAM", payload: newStream});
-                })
-                .catch((error) => {
-                    console.error("Error accessing media devices:", error);
-                });
+            dispatch({ type: "SET_LOCAL_STREAM", payload: stream });
         }
     }, [params?.Id]);
 
-    useEffect(() => {
-        if (!state.peer || !state.localStream || !params?.Id) return;
-
-        const call = state.peer.call(params.Id, state.localStream);
-
-        call.on("stream", (incomingStream: MediaStream) => {
-            console.log("Incoming stream from peer:", params.Id);
-            dispatch({ type: "ADD_PEER", payload: { peerId: params.Id, stream: incomingStream } });
-        });
-
-        call.on("close", () => {
-            console.log("Call with peer closed:", params.Id);
-            dispatch({ type: "REMOVE_PEER", payload: params.Id });
-        });
-
-        call.on("error", (err:any) => {
-            console.error("Error during call:", err);
-        });
-    }, [params?.Id, dispatch]);
-
     const toggleMute = () => {
-        console.log(state.localStream);
-        if (state.localStream) {
-            const audioTrack = state.localStream.getAudioTracks()[0];
+        console.log(stream);
+        if (stream) {
+            const audioTrack = stream.getAudioTracks()[0];
             console.log(audioTrack);
             const newMutestatus = !audioTrack?.enabled;
             if (audioTrack) {
                 console.log("Toggling audio track");
                 audioTrack.enabled = !audioTrack.enabled;
+                const updatedStream = stream;
+                updatedStream.getAudioTracks()[0].enabled = audioTrack.enabled;
+                setState(updatedStream);
                 if (state?.ws) {
-                    state.ws.send(JSON.stringify({
-                        type: "TOGGLE_AUDIO",
-                        Group: state.groupId,
-                        peerId: state.peer._id,
-                        Muted: !audioTrack.enabled
-                    }));
+                    dispatch({ type: "SET_TOGGLE_AUDIO_STATE", payload: newMutestatus });
+                    state.ws.send(
+                        JSON.stringify({
+                            type: "TOGGLE_AUDIO",
+                            Group: state.groupId,
+                            peerId: state.peer._id,
+                            Muted: !audioTrack.enabled,
+                        })
+                    );
                 }
             }
             setIsMuted(newMutestatus);
@@ -73,76 +48,103 @@ export default function Page({ params }: { params: { Id: string } }) {
     };
 
     const toggleVideo = () => {
-        if (state.localStream) {
-            const videoTrack = state.localStream.getVideoTracks()[0];
+        if (stream) {
+            const videoTrack = stream.getVideoTracks()[0];
             if (videoTrack) {
                 videoTrack.enabled = !videoTrack.enabled;
                 setIsVideoOff(!videoTrack.enabled);
+                const updatedStream = stream;
+                updatedStream.getVideoTracks()[0].enabled = videoTrack.enabled;
+                setState(updatedStream);
                 if (state?.ws) {
-                    state.ws.send(JSON.stringify({
-                        type: "TOGGLE_VIDEO",
-                        peerId: state.peer._id,
-                        isVideoOff:videoTrack.enabled
-                    }));
+                    dispatch({ type: "SET_TOGGLE_VIDEO_STATE", payload: videoTrack.enabled });
+                    state.ws.send(
+                        JSON.stringify({
+                            type: "TOGGLE_VIDEO",
+                            peerId: state.peer._id,
+                            isVideoOff: videoTrack.enabled,
+                        })
+                    );
                 }
             }
         }
     };
-
-    console.log(state?.localStream?.getAudioTracks()[0]?.enabled)
-    console.log(isMuted)
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
-            <h1 className="text-3xl font-bold text-gray-800 mb-8">Group Video Chat</h1>
-            <video
-                autoPlay
-                playsInline
-                muted={false}
-                className="w-96 h-64 border-4 border-blue-500 rounded-lg shadow-lg transform transition duration-300 hover:scale-105"
-                ref={(video) => {
-                    if (video && state.localStream) video.srcObject = state.localStream;
-                }}
-            />
-            <div className="flex flex-wrap justify-center gap-6">
-                {Object.entries(state.peers).map(([peerId, stream]:any) => (
-                    peerId !== state?.peer?._id && (
-                        <video
-                        key={peerId}
-                        autoPlay
-                        muted={!state?.localStream?.getAudioTracks()[0]?.enabled}
-                        playsInline
-                        className="w-72 h-48 border-4 border-green-500 rounded-lg shadow-lg transform transition duration-300 hover:scale-105"
-                        ref={(video) => {
-                            if (video) video.srcObject = stream;
+        <div className="flex min-h-screen rounded-lg bg-black text-white">
+            <div className="flex flex-col items-center justify-center w-3/4 relative">
+                <h1 className="text-3xl font-bold mb-6">Group Video Chat</h1>
+                <video
+                    autoPlay
+                    playsInline
+                    muted={!stream?.getAudioTracks()[0]?.enabled}
+                    style={{ transform: "rotateY(180deg)" }}
+                    className="w-2/3 h-auto border-4 border-blue-500 rounded-lg shadow-lg"
+                    ref={(video) => {
+                        if (video && stream) video.srcObject = stream;
+                    }}
+                />
+                <div
+                    onClick={toggleMute}
+                    className={`absolute top-4 right-4 p-2 rounded-full bg-black bg-opacity-50 cursor-pointer ${
+                        isMuted ? "text-green-500" : "text-red-500"
+                    }`}
+                >
+                    <i className={`fas fa-microphone${isMuted ? "-slash" : ""} text-3xl`}></i>
+                </div>
+
+                <div className="mt-6 flex gap-6">
+                    <button
+                        onClick={toggleMute}
+                        className={`px-4 py-2 rounded-lg shadow-lg transition duration-300 ${
+                            !stream?.getAudioTracks()[0]?.enabled ? "bg-green-500" : "bg-red-500"
+                        } text-white`}
+                    >
+                        {!stream?.getAudioTracks()[0]?.enabled ? "Unmute" : "Mute"}
+                    </button>
+                    <button
+                        onClick={toggleVideo}
+                        className={`px-4 py-2 rounded-lg shadow-lg transition duration-300 ${
+                            isVideoOff ? "bg-green-500" : "bg-blue-500"
+                        } text-white`}
+                    >
+                        {isVideoOff ? "Turn Video On" : "Turn Video Off"}
+                    </button>
+                    <button
+                        className={`px-4 py-2 rounded-lg shadow-lg bg-red-500 transition duration-300 text-white`}
+                        onClick={() => {
+                            state?.ws?.send(
+                                JSON.stringify({
+                                    type: "REMOVE_PEER",
+                                    Group: state.groupId,
+                                    peerId: state.peer._id,
+                                })
+                            );
                         }}
-                    />
-                    )
-                   
-                ))}
+                    >
+                        <a href="/screens/dashboard">Leave Group</a>
+                    </button>
+                </div>
             </div>
 
-            <div className="mt-6 flex gap-4">
-                <button
-                    onClick={toggleMute}
-                    className={`px-4 py-2 rounded-lg shadow-lg transition duration-300 ${
-                        !state?.localStream?.getAudioTracks()[0]?.enabled ? "bg-green-500" : "bg-red-500"
-                    } text-white`}
-                >
-                    {!state?.localStream?.getAudioTracks()[0]?.enabled ? "Unmute" : "Mute"}
-                </button>
-                <button
-                    onClick={toggleVideo}
-                    className={`px-4 py-2 rounded-lg shadow-lg transition duration-300 ${
-                        isVideoOff ? "bg-green-500" : "bg-blue-500"
-                    } text-white`}
-                >
-                    {isVideoOff ? "Turn Video On" : "Turn Video Off"}
-                </button>
-                <button className={`px-4 py-2 rounded-lg shadow-lg bg-red-500 transition duration-300 text-white`} onClick={()=>{
-                    state?.ws?.send(JSON.stringify({type:"REMOVE_PEER",Group:state.groupId,peerId:state.peer._id}))
-                }}>
-                    <a href="/screens/dashboard">Leave Group</a>
-                </button>
+            <div className="w-1/4 flex flex-col items-center justify-start p-4">
+                <h2 className="text-xl font-bold mb-4">Remote Users</h2>
+                <div className="flex flex-col gap-4">
+                    {Object.entries(state.peers).map(([peerId, stream]: any) =>
+                        peerId !== state?.peer?._id ? (
+                            <video
+                                key={peerId}
+                                autoPlay
+                                muted={!stream?.getAudioTracks()[0]?.enabled}
+                                playsInline
+                                style={{ transform: "rotateY(180deg)" }}
+                                className="w-full h-32 border-4 border-green-500 rounded-lg shadow-lg"
+                                ref={(video) => {
+                                    if (video) video.srcObject = stream;
+                                }}
+                            />
+                        ) : null
+                    )}
+                </div>
             </div>
         </div>
     );
