@@ -5,7 +5,7 @@ export const initializePeer = (dispatch: React.Dispatch<VideoAction>, myStream: 
   const peer = new Peer();
   console.log("initialize peer", myStream);
 
-  peer.on("call", (call) => {
+  peer.on("call", async (call) => {
     const { peerId, isMuted, isVideoOff } = call.metadata || {};
     // console.log(call.peer)
     // console.log("myStream", myStream);
@@ -14,6 +14,8 @@ export const initializePeer = (dispatch: React.Dispatch<VideoAction>, myStream: 
     // console.log("Is peer muted?", isMuted || "Unknown");
     // console.log("Is peer video off?",isVideoOff|| "Unknown");
     call.answer(myStream);
+    console.log("Answered call from:", call.peer);
+    dispatch({ type: "SET_LOADING", payload: false});
     call.on("stream", (remoteStream) => {
       console.log("Adding peer stream:", call.peer);
       remoteStream.getAudioTracks()[0].enabled = isMuted;

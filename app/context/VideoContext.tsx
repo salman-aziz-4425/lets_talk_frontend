@@ -19,6 +19,7 @@ const initialState: VideoState = {
   ws: null,
   muted: typeof window !== "undefined" ? localStorage.getItem("muted") === "true"?true:false : null,
   videoOff: typeof window !== "undefined" ? localStorage.getItem("videoOff") === "true"?true:false : null,
+  loading: true,
 };
 
 const VideoContext = createContext<{
@@ -52,9 +53,6 @@ export const VideoContextProvider = ({ children }: { children: ReactNode }) => {
           const message = JSON.parse(event.data);
           if (message.type === "NEW_PEER") {
             const updatedStream: MediaStream = stream;
-            // console.log("Calling peer:", message.peerId);
-            // console.log( localStorage.getItem("muted") ==='true')
-            // console.log( localStorage.getItem("videoOff") ==='true')
             const call = peer?.call(message.peerId, updatedStream,{
               metadata: {
                 peerId: peerId,
@@ -91,7 +89,7 @@ export const VideoContextProvider = ({ children }: { children: ReactNode }) => {
   }, [state?.groupId, dispatch]);
   useEffect(() => {
     if (state?.token) {
-      localStorage.setItem("authToken", state.token);
+      localStorage.setItem("authToken", state?.token);
     } else {
       localStorage.removeItem("authToken");
     }

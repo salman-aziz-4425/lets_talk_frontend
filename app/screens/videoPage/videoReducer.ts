@@ -56,6 +56,8 @@ export const videoReducer = (state: VideoState, action: VideoAction): VideoState
       localStorage.setItem("videoOff", action.payload);
       return { ...state, videoOff: action.payload };
     }
+    case "SET_LOADING":
+      return { ...state, loading: action.payload };
     default:
       return state;
   }

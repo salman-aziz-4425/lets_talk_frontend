@@ -1,7 +1,10 @@
 "use client";
 
+import PulseImage from "@/app/components/UI/Image";
 import { useVideoContext } from "@/app/context/VideoContext";
 import useMediaStream from "@/hooks/useMediaStream";
+import { Spacer } from "@nextui-org/react";
+import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 
 export default function Page({ params }: { params: { Id: string } }) {
@@ -20,35 +23,29 @@ export default function Page({ params }: { params: { Id: string } }) {
     }, [params?.Id]);
 
     const toggleMute = () => {
-        if (stream) {
-            const audioTrack = stream.getAudioTracks()[0];
-            const newMutestatus = !audioTrack?.enabled;
-            if (audioTrack) {
-                console.log("Toggling audio track");
-                audioTrack.enabled = !audioTrack.enabled;
-                const updatedStream = stream;
-                updatedStream.getAudioTracks()[0].enabled = audioTrack.enabled;
-                setState(updatedStream);
-                if (state?.ws) {
-                    dispatch({ type: "SET_TOGGLE_AUDIO_STATE", payload: newMutestatus });
-                    state.ws.send(
-                        JSON.stringify({
-                            type: "TOGGLE_AUDIO",
-                            Group: state.groupId,
-                            peerId: state.peer._id,
-                            Muted: !audioTrack.enabled,
-                        })
-                    );
-                }
-            }
-            setIsMuted(newMutestatus);
+        const audioTrack = stream.getAudioTracks()[0];
+        const newMutestatus = !audioTrack?.enabled;
+        console.log("Toggling audio track");
+        audioTrack.enabled = !audioTrack.enabled;
+        const updatedStream = stream;
+        updatedStream.getAudioTracks()[0].enabled = audioTrack.enabled;
+        setState(updatedStream);
+        if (state?.ws) {
+            dispatch({ type: "SET_TOGGLE_AUDIO_STATE", payload: newMutestatus });
+            state.ws.send(
+                JSON.stringify({
+                    type: "TOGGLE_AUDIO",
+                    Group: state.groupId,
+                    peerId: state.peer._id,
+                    Muted: !audioTrack.enabled,
+                })
+            );
         }
+        setIsMuted(newMutestatus);
     };
 
     const toggleVideo = () => {
-        if (!stream) return;
-        const videoTrack = stream.getVideoTracks()[0];
-        if (!videoTrack) return;
+        const videoTrack = stream?.getVideoTracks()[0];
         const isVideoOff = !videoTrack.enabled;
         videoTrack.enabled = isVideoOff;
         setIsVideoOff(isVideoOff);
@@ -67,6 +64,23 @@ export default function Page({ params }: { params: { Id: string } }) {
         setState(updatedStream);
     };
 
+    if (state?.loading) {
+        return (
+            <div className="flex min-h-screen items-center justify-center w-full">
+                <div className="flex flex-col items-center justify-center">
+                    <PulseImage
+                        src="/let-talk-logo.jpg"
+                        alt="Let's Talk Logo"
+                        width={300}
+                        height={300}
+                        enablePulse={true}
+                    />
+                    <div className="spinner spinner-primary" />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex min-h-screen rounded-lg bg-black text-white">
             <div className="flex flex-col items-center justify-center w-3/4 relative">
@@ -83,9 +97,8 @@ export default function Page({ params }: { params: { Id: string } }) {
                 />
                 <div
                     onClick={toggleMute}
-                    className={`absolute top-4 right-4 p-2 rounded-full bg-black bg-opacity-50 cursor-pointer ${
-                        isMuted ? "text-green-500" : "text-red-500"
-                    }`}
+                    className={`absolute top-4 right-4 p-2 rounded-full bg-black bg-opacity-50 cursor-pointer ${isMuted ? "text-green-500" : "text-red-500"
+                        }`}
                 >
                     <i className={`fas fa-microphone${isMuted ? "-slash" : ""} text-3xl`}></i>
                 </div>
@@ -93,17 +106,15 @@ export default function Page({ params }: { params: { Id: string } }) {
                 <div className="mt-6 flex gap-6">
                     <button
                         onClick={toggleMute}
-                        className={`px-4 py-2 rounded-lg shadow-lg transition duration-300 ${
-                            !stream?.getAudioTracks()[0]?.enabled ? "bg-green-500" : "bg-red-500"
-                        } text-white`}
+                        className={`px-4 py-2 rounded-lg shadow-lg transition duration-300 ${!stream?.getAudioTracks()[0]?.enabled ? "bg-green-500" : "bg-red-500"
+                            } text-white`}
                     >
                         {!stream?.getAudioTracks()[0]?.enabled ? "Unmute" : "Mute"}
                     </button>
                     <button
                         onClick={toggleVideo}
-                        className={`px-4 py-2 rounded-lg shadow-lg transition duration-300 ${
-                            !stream?.getVideoTracks()[0]?.enabled ? "bg-green-500" : "bg-blue-500"
-                        } text-white`}
+                        className={`px-4 py-2 rounded-lg shadow-lg transition duration-300 ${!stream?.getVideoTracks()[0]?.enabled ? "bg-green-500" : "bg-blue-500"
+                            } text-white`}
                     >
                         {!stream?.getVideoTracks()[0]?.enabled ? "Turn Video On" : "Turn Video Off"}
                     </button>
@@ -119,7 +130,7 @@ export default function Page({ params }: { params: { Id: string } }) {
                             );
                         }}
                     >
-                        <a href="/screens/dashboard">Leave Group</a>
+                        <Link href="/screens/dashboard">Leave Group</Link>
                     </button>
                 </div>
             </div>
