@@ -20,10 +20,8 @@ export default function Page({ params }: { params: { Id: string } }) {
     }, [params?.Id]);
 
     const toggleMute = () => {
-        console.log(stream);
         if (stream) {
             const audioTrack = stream.getAudioTracks()[0];
-            console.log(audioTrack);
             const newMutestatus = !audioTrack?.enabled;
             if (audioTrack) {
                 console.log("Toggling audio track");
@@ -48,27 +46,27 @@ export default function Page({ params }: { params: { Id: string } }) {
     };
 
     const toggleVideo = () => {
-        if (stream) {
-            const videoTrack = stream.getVideoTracks()[0];
-            if (videoTrack) {
-                videoTrack.enabled = !videoTrack.enabled;
-                setIsVideoOff(!videoTrack.enabled);
-                const updatedStream = stream;
-                updatedStream.getVideoTracks()[0].enabled = videoTrack.enabled;
-                setState(updatedStream);
-                if (state?.ws) {
-                    dispatch({ type: "SET_TOGGLE_VIDEO_STATE", payload: videoTrack.enabled });
-                    state.ws.send(
-                        JSON.stringify({
-                            type: "TOGGLE_VIDEO",
-                            peerId: state.peer._id,
-                            isVideoOff: videoTrack.enabled,
-                        })
-                    );
-                }
-            }
+        if (!stream) return;
+        const videoTrack = stream.getVideoTracks()[0];
+        if (!videoTrack) return;
+        const isVideoOff = !videoTrack.enabled;
+        videoTrack.enabled = isVideoOff;
+        setIsVideoOff(isVideoOff);
+        const updatedStream = new MediaStream([...stream.getTracks()]);
+        updatedStream.getVideoTracks()[0].enabled = isVideoOff;
+        if (state?.ws && state?.peer?._id) {
+            dispatch({ type: "SET_TOGGLE_VIDEO_STATE", payload: isVideoOff });
+            state.ws.send(
+                JSON.stringify({
+                    type: "TOGGLE_VIDEO",
+                    peerId: state.peer._id,
+                    isVideoOff,
+                })
+            );
         }
+        setState(updatedStream);
     };
+
     return (
         <div className="flex min-h-screen rounded-lg bg-black text-white">
             <div className="flex flex-col items-center justify-center w-3/4 relative">
@@ -104,10 +102,10 @@ export default function Page({ params }: { params: { Id: string } }) {
                     <button
                         onClick={toggleVideo}
                         className={`px-4 py-2 rounded-lg shadow-lg transition duration-300 ${
-                            isVideoOff ? "bg-green-500" : "bg-blue-500"
+                            !stream?.getVideoTracks()[0]?.enabled ? "bg-green-500" : "bg-blue-500"
                         } text-white`}
                     >
-                        {isVideoOff ? "Turn Video On" : "Turn Video Off"}
+                        {!stream?.getVideoTracks()[0]?.enabled ? "Turn Video On" : "Turn Video Off"}
                     </button>
                     <button
                         className={`px-4 py-2 rounded-lg shadow-lg bg-red-500 transition duration-300 text-white`}

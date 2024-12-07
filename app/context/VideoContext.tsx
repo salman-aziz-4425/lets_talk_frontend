@@ -17,8 +17,8 @@ const initialState: VideoState = {
   peers: {},
   localStream: null,
   ws: null,
-  muted: typeof window !== "undefined" ? localStorage.getItem("muted") === "true" : null,
-  videoOff: typeof window !== "undefined" ? localStorage.getItem("videoOff") === "true" : null,
+  muted: typeof window !== "undefined" ? localStorage.getItem("muted") === "true"?true:false : null,
+  videoOff: typeof window !== "undefined" ? localStorage.getItem("videoOff") === "true"?true:false : null,
 };
 
 const VideoContext = createContext<{
@@ -51,7 +51,17 @@ export const VideoContextProvider = ({ children }: { children: ReactNode }) => {
         ws.onmessage = (event) => {
           const message = JSON.parse(event.data);
           if (message.type === "NEW_PEER") {
-            const call = peer?.call(message.peerId, stream);
+            const updatedStream: MediaStream = stream;
+            // console.log("Calling peer:", message.peerId);
+            // console.log( localStorage.getItem("muted") ==='true')
+            // console.log( localStorage.getItem("videoOff") ==='true')
+            const call = peer?.call(message.peerId, updatedStream,{
+              metadata: {
+                peerId: peerId,
+                isMuted:  typeof window !== "undefined"?localStorage.getItem("muted") ==='true'?true:false:true,
+                isVideoOff:  typeof window !== "undefined"?localStorage.getItem("videoOff") ==='true'?true:false:true,
+              },
+            });
             call?.on("stream", (remoteStream) => {
               dispatch({ type: "ADD_PEER", payload: { peerId: message.peerId, stream: remoteStream } });
             });
@@ -78,10 +88,9 @@ export const VideoContextProvider = ({ children }: { children: ReactNode }) => {
         console.log("Cleaning up peer call for ID:");
       };
     }
-  }, [state.groupId, dispatch]);
-
+  }, [state?.groupId, dispatch]);
   useEffect(() => {
-    if (state.token) {
+    if (state?.token) {
       localStorage.setItem("authToken", state.token);
     } else {
       localStorage.removeItem("authToken");

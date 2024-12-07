@@ -31,6 +31,7 @@ export const videoReducer = (state: VideoState, action: VideoAction): VideoState
       if(state.peers[action.payload.peerId]) {
         const peerStream = state.peers[action.payload.peerId];
         const audioTrack = peerStream.getAudioTracks()[0];
+        
         if (audioTrack) {
           audioTrack.enabled = action.payload.Muted;
         }
