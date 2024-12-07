@@ -1,8 +1,7 @@
-# Next.js & NextUI Template
+# Lets Talk
 
-This is a template for creating applications using Next.js 14 (app directory) and NextUI (v2).
+<img src="./public/let-talk-logo.jpg" alt="Description of Image" width="150" style="border-radius:20%;"/>
 
-[Try it on CodeSandbox](https://githubbox.com/nextui-org/next-app-template)
 
 ## Technologies Used
 
@@ -11,17 +10,11 @@ This is a template for creating applications using Next.js 14 (app directory) an
 - [Tailwind CSS](https://tailwindcss.com/)
 - [Tailwind Variants](https://tailwind-variants.org)
 - [TypeScript](https://www.typescriptlang.org/)
-- [Framer Motion](https://www.framer.com/motion/)
-- [next-themes](https://github.com/pacocoursey/next-themes)
 
 ## How to Use
 
-### Use the template with create-next-app
-
-To create a new project based on this template using `create-next-app`, run the following command:
-
 ```bash
-npx create-next-app -e https://github.com/nextui-org/next-app-template
+git clone https://github.com/salman-aziz-4425/lets_talk_frontend.git
 ```
 
 ### Install dependencies
@@ -29,22 +22,15 @@ npx create-next-app -e https://github.com/nextui-org/next-app-template
 You can use one of them `npm`, `yarn`, `pnpm`, `bun`, Example using `npm`:
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### Run the development server
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
-### Setup pnpm (optional)
-
-If you are using `pnpm`, you need to add the following code to your `.npmrc` file:
-
-```bash
-public-hoist-pattern[]=*@nextui-org/*
-```
 
 After modifying the `.npmrc` file, you need to run `pnpm install` again to ensure that the dependencies are installed correctly.
 
